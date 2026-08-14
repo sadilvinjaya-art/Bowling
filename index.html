@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOWLING LAB | 200-Day Spin Bowling Analyzer</title>
+    <!-- Chart.js CDN (Falls back gracefully if offline) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* BASE & THEME STYLES */
+        :root {
+            --bg-main: #0b0f19;
+            --bg-card: #151d2a;
+            --bg-card-alt: #1c2638;
+            --border-color: #2a364f;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --accent-gold: #f59e0b;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding-bottom: 40px;
+            line-height: 1.5;
+        }
+
+        /* HEADER */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background-color: rgba(11, 15, 25, 0.95);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 16px;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .brand-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            background: linear-gradient(90deg, #f59e0b, #10b981, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-transform: uppercase;
+        }
+
+        .brand-sub {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { background-color: var(--bg-card-alt); }
+        .btn-gold { border-color: rgba(245, 158, 11, 0.4); color: var(--accent-gold); }
+        .btn-green { border-color: rgba(16, 185, 129, 0.4); color: var(--accent-green); }
+        .btn-blue { border-color: rgba(59, 130, 246, 0.4); color: var(--accent-blue); }
+        .btn-danger { border-color: rgba(239, 68, 68, 0.4); color: var(--accent-red); }
+
+        /* PROGRESS BAR */
+        .progress-box {
+            background-color: var(--bg-card);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            margin-top: 4px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 6px;
+            background-color: var(--bg-main);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-green), var(--accent-blue));
+            transition: width 0.3s ease;
+        }
+
+        /* LAYOUT & CARDS */
+        main {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+
+        .stat-badge {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-badge-lbl { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; }
+        .stat-badge-val { font-size: 1.1rem; font-weight: 800; margin-top: 2px; }
+
+        /* FORM INPUTS */
+        input, select, textarea {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            width: 100%;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        /* ACCORDIONS / DAYS */
+        .day-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .day-header {
+            padding: 12px 16px;
+            background-color: var(--bg-card);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .day-header:hover { background-color: var(--bg-card-alt); }
+
+        .day-body {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            background-color: rgba(11, 15, 25, 0.4);
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .day-body.open { display: flex; }
+
+        .style-box {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .style-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 700;
+        }
+        .tag-green { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .tag-gray { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
+
+        .chart-box {
+            position: relative;
+            height: 240px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-content">
+            <div>
+                <div class="brand-title">BOWLING LAB</div>
+                <div class="brand-sub">200-Day Spin Bowling Performance Analyzer</div>
+            </div>
+
+            <div class="nav-buttons">
+                <button class="btn btn-gold" onclick="scrollToSec('entrySection')">📝 Log Data</button>
+                <button class="btn" onclick="scrollToSec('dashboard')">Dashboard</button>
+                <button class="btn" onclick="scrollToSec('comparisons')">Comparisons</button>
+                <button class="btn" onclick="scrollToSec('analytics')">Analytics</button>
+                <button class="btn btn-green" onclick="exportJSON()">JSON</button>
+                <button class="btn btn-blue" onclick="exportCSV()">CSV</button>
+                <button class="btn btn-danger" onclick="resetData()">Reset</button>
+            </div>
+
+            <div class="progress-box">
+                <div class="progress-info">
+                    <span>Progress: <strong id="progressText" style="color:white">0/200 Days</strong> (<span id="progressPct">0%</span>)</span>
+                    <span>Total Deliveries: <strong id="headerBalls" style="color:var(--accent-gold)">0</strong></span>
+                </div>
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" id="progressBar"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="card">
+            <div class="section-title">📊 Overall 200-Day Dashboard</div>
+            <div class="section-sub">Aggregated performance across all bowling deliveries</div>
+            <div class="grid-4" id="dashboardCards"></div>
+        </section>
+
+        <!-- WINNER & COMPARISONS -->
+        <section id="comparisons" class="card">
+            <div class="section-title">🏆 Performance Ranking & Arm Comparison</div>
+            <div class="section-sub">Weighted Score: Accuracy (40%) + 100+ Pace (25%) + High Performance (35%)</div>
+            <div class="grid-4" id="rankingsContainer" style="margin-bottom: 16px;"></div>
+
+            <div class="grid-2">
+                <div class="stat-badge" style="text-align:left; padding: 12px;">
+                    <div style="font-weight:700; color:var(--accent-green); margin-bottom: 6px;">RIGHT ARM (Leg Spin + Googly)</div>
+                    <div id="rightArmStats" style="font-size: 0.8rem; color: var(--text-muted)">No data recorded yet</div>
+                </div>
+                <div class="stat-badge" style="text-align:left; padding: 12px;">
+                    <div style="font-weight:700; color:var(--accent-gold); margin-bottom: 6px;">LEFT ARM (Chinaman + Googly)</div>
+                    <div id="leftArmStats" style="font-size: 0.8rem; color: var(--text-muted)">No data recorded yet</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ANALYTICS CHARTS -->
+        <section id="analytics" class="card">
+            <div class="section-title">📈 Progress Charts</div>
+            <div class="section-sub">Visualizing accuracy & pace trends</div>
+            <div class="grid-2">
+                <div class="chart-box"><canvas id="chartAccuracy"></canvas></div>
+                <div class="chart-box"><canvas id="chartPace"></canvas></div>
+            </div>
+        </section>
+
+        <!-- LOGGING DAYS -->
+        <section id="entrySection">
+            <div class="card" style="margin-bottom: 12px;">
+                <div class="section-title">📅 Daily Training Logs (Days 1–200)</div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <select id="rangeFilter" onchange="renderDays()">
+                        <option value="1-50">Days 1 - 50</option>
+                        <option value="51-100">Days 51 - 100</option>
+                        <option value="101-150">Days 101 - 150</option>
+                        <option value="151-200">Days 151 - 200</option>
+                    </select>
+                    <select id="statusFilter" onchange="renderDays()">
+                        <option value="all">All Statuses</option>
+                        <option value="completed">Completed Days Only</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="daysList"></div>
+        </section>
+    </main>
+
+    <script>
+        const TOTAL_DAYS = 200;
+        const STYLES = [
+            { key: 'legspin', name: 'Leg Spin', arm: 'Right', color: '#10b981' },
+            { key: 'googly', name: 'Googly', arm: 'Right', color: '#3b82f6' },
+            { key: 'chinaman', name: 'Chinaman', arm: 'Left', color: '#f59e0b' },
+            { key: 'chinamangoogly', name: 'Chinaman Googly', arm: 'Left', color: '#ef4444' }
+        ];
+
+        let bowlingData = {};
+
+        function initData() {
+            const saved = localStorage.getItem('bowling_lab_offline_data');
+            if (saved) {
+                try { bowlingData = JSON.parse(saved); return; } catch(e){}
+            }
+            for (let i = 1; i <= TOTAL_DAYS; i++) {
+                bowlingData[i] = {
+                    completed: false,
+                    date: '',
+                    notes: '',
+                    styles: {
+                        legspin: { a:0, b:0, c:0, d:0 },
+                        googly: { a:0, b:0, c:0, d:0 },
+                        chinaman: { a:0, b:0, c:0, d:0 },
+                        chinamangoogly: { a:0, b:0, c:0, d:0 }
+                    }
+                };
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('bowling_lab_offline_data', JSON.stringify(bowlingData));
+            updateUI();
+        }
+
+        function calcMetrics(st) {
+            const a = Number(st.a)||0, b = Number(st.b)||0, c = Number(st.c)||0, d = Number(st.d)||0;
+            const total = a + b + c + d;
+            const hits = a + b;
+            const pace100 = a + c;
+            return {
+                total,
+                hits,
+                acc: total > 0 ? (hits / total) * 100 : 0,
+                pacePct: total > 0 ? (pace100 / total) * 100 : 0,
+                highPerfPct: total > 0 ? (a / total) * 100 : 0
+            };
+        }
+
+        function updateUI() {
+            let completedCount = 0;
+            let grandBalls = 0;
+            let totals = {};
+            STYLES.forEach(s => totals[s.key] = { a:0, b:0, c:0, d:0 });
+
+            for (let d = 1; d <= TOTAL_DAYS; d++) {
+                if (bowlingData[d].completed) completedCount++;
+                STYLES.forEach(s => {
+                    const st = bowlingData[d].styles[s.key];
+                    totals[s.key].a += Number(st.a)||0;
+                    totals[s.key].b += Number(st.b)||0;
+                    totals[s.key].c += Number(st.c)||0;
+                    totals[s.key].d += Number(st.d)||0;
+                });
+            }
+
+            STYLES.forEach(s => grandBalls += calcMetrics(totals[s.key]).total);
+
+            // Update Progress Header
+            document.getElementById('progressText').innerText = `${completedCount}/${TOTAL_DAYS} Days`;
+            document.getElementById('progressPct').innerText = `${((completedCount/TOTAL_DAYS)*100).toFixed(0)}%`;
+            document.getElementById('progressBar').style.width = `${(completedCount/TOTAL_DAYS)*100}%`;
+            document.getElementById('headerBalls').innerText = grandBalls;
+
+            // Render Dashboard Cards
+            const dbCards = document.getElementById('dashboardCards');
+            dbCards.innerHTML = '';
+            STYLES.forEach(s => {
+                const m = calcMetrics(totals[s.key]);
+                dbCards.innerHTML += `
+                    <div class="stat-badge" style="text-align:left;">
+                        <div style="color:${s.color}; font-weight:bold; font-size:0.85rem;">${s.name.toUpperCase()}</div>
+                        <div style="font-size:1.3rem; font-weight:800; margin:4px 0;">${m.total} <span style="font-size:0.7rem; color:var(--text-muted)">balls</span></div>
+                        <div style="font-size:0.75rem; color:var(--text-muted)">
+                            Accuracy: <strong style="color:var(--accent-green)">${m.acc.toFixed(1)}%</strong><br>
+                            100+ Pace: <strong style="color:var(--accent-blue)">${m.pacePct.toFixed(1)}%</strong><br>
+                            High Perf: <strong style="color:var(--accent-gold)">${m.highPerfPct.toFixed(1)}%</strong>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Winner Ranking
+            const ranked = STYLES.map(s => {
+                const m = calcMetrics(totals[s.key]);
+                const score = m.total > 0 ? (m.acc * 0.4) + (m.pacePct * 0.25) + (m.highPerfPct * 0.35) : 0;
+                return { ...s, score, total: m.total };
+            }).sort((x, y) => y.score - x.score);
+
+            const rContainer = document.getElementById('rankingsContainer');
+            rContainer.innerHTML = '';
+            ranked.forEach((r, idx) => {
+                rContainer.innerHTML += `
+                    <div class="stat-badge">
+                        <div class="stat-badge-lbl">#${idx+1} ${r.name}</div>
+                        <div class="stat-badge-val" style="color:var(--accent-gold);">${r.total > 0 ? r.score.toFixed(1) : 'N/A'}</div>
+                        <div class="stat-badge-lbl">${r.total} balls</div>
+                    </div>
+                `;
+            });
+
+            // Arm comparison
+            const rightBalls = calcMetrics(totals.legspin).total + calcMetrics(totals.googly).total;
+            const leftBalls = calcMetrics(totals.chinaman).total + calcMetrics(totals.chinamangoogly).total;
+
+            document.getElementById('rightArmStats').innerHTML = `Total Balls: <strong>${rightBalls}</strong>`;
+            document.getElementById('leftArmStats').innerHTML = `Total Balls: <strong>${leftBalls}</strong>`;
+        }
+
+        function renderDays() {
+            const range = document.getElementById('rangeFilter').value.split('-');
+            const start = Number(range[0]), end = Number(range[1]);
+            const status = document.getElementById('statusFilter').value;
+            const container = document.getElementById('daysList');
+            container.innerHTML = '';
+
+            for (let d = start; d <= end; d++) {
+                const day = bowlingData[d];
+                if (status === 'completed' && !day.completed) continue;
+
+                let dayBalls = 0;
+                STYLES.forEach(s => dayBalls += calcMetrics(day.styles[s.key]).total);
+
+                container.innerHTML += `
+                    <div class="day-card">
+                        <div class="day-header" onclick="toggleDay(${d})">
+                            <div>
+                                <strong style="color:var(--accent-gold);">DAY ${d}</strong>
+                                <span class="tag ${day.completed ? 'tag-green' : 'tag-gray'}" style="margin-left:8px;">${day.completed ? 'Completed' : 'Incomplete'}</span>
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-muted)">
+                                Deliveries: <strong style="color:white">${dayBalls}</strong> ▾
+                            </div>
+                        </div>
+
+                        <div class="day-body" id="dayBody_${d}">
+                            <div class="grid-2">
+                                <div>
+                                    <label class="stat-badge-lbl">Date</label>
+                                    <input type="date" value="${day.date}" onchange="updateDayField(${d}, 'date', this.value)">
+                                </div>
+                                <div>
+                                    <label class="stat-badge-lbl">Notes</label>
+                                    <input type="text" placeholder="Session notes..." value="${day.notes}" onchange="updateDayField(${d}, 'notes', this.value)">
+                                </div>
+                            </div>
+
+                            <div class="grid-2">
+                                ${STYLES.map(s => {
+                                    const st = day.styles[s.key];
+                                    return `
+                                        <div class="style-box">
+                                            <div class="style-title" style="color:${s.color}">${s.name}</div>
+                                            <div class="grid-2" style="gap:6px;">
+                                                <div>
+                                                    <label class="stat-badge-lbl" style="color:var(--accent-green)">100+ & Hit</label>
+                                                    <input type="number" min="0" value="${st.a}" onchange="updateStyleCount(${d}, '${s.key}', 'a', this.value)">
+                                                </div>
+                                                <div>
+                                                    <label class="stat-badge-lbl" style="color:var(--accent-blue)">&lt;100 & Hit</label>
+                                                    <input type="number" min="0" value="${st.b}" onchange="updateStyleCount(${d}, '${s.key}', 'b', this.value)">
+                                                </div>
+                                                <div>
+                                                    <label class="stat-badge-lbl" style="color:var(--accent-gold)">100+ & Miss</label>
+                                                    <input type="number" min="0" value="${st.c}" onchange="updateStyleCount(${d}, '${s.key}', 'c', this.value)">
+                                                </div>
+                                                <div>
+                                                    <label class="stat-badge-lbl" style="color:var(--accent-red)">&lt;100 & Miss</label>
+                                                    <input type="number" min="0" value="${st.d}" onchange="updateStyleCount(${d}, '${s.key}', 'd', this.value)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+
+                            <button class="btn btn-green" style="width:100%; text-align:center;" onclick="markComplete(${d})">
+                                ✓ Save Day ${d}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function toggleDay(d) {
+            const body = document.getElementById(`dayBody_${d}`);
+            body.classList.toggle('open');
+        }
+
+        function updateDayField(d, field, val) {
+            bowlingData[d][field] = val;
+            saveData();
+        }
+
+        function updateStyleCount(d, styleKey, cat, val) {
+            bowlingData[d].styles[styleKey][cat] = Math.max(0, Number(val)||0);
+            saveData();
+        }
+
+        function markComplete(d) {
+            bowlingData[d].completed = true;
+            saveData();
+            renderDays();
+        }
+
+        function resetData() {
+            if (confirm("Reset all 200 days of data?")) {
+                localStorage.removeItem('bowling_lab_offline_data');
+                initData();
+                updateUI();
+                renderDays();
+            }
+        }
+
+        function exportJSON() {
+            const blob = new Blob([JSON.stringify(bowlingData, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "bowling_lab_data.json";
+            a.click();
+        }
+
+        function exportCSV() {
+            let csv = "Day,Completed,Style,100+Hit,Under100Hit,100+Miss,Under100Miss,Total,Accuracy,Pace100Pct\n";
+            for (let d = 1; d <= TOTAL_DAYS; d++) {
+                STYLES.forEach(s => {
+                    const st = bowlingData[d].styles[s.key];
+                    const m = calcMetrics(st);
+                    csv += `${d},${bowlingData[d].completed},${s.name},${st.a},${st.b},${st.c},${st.d},${m.total},${m.acc.toFixed(1)},${m.pacePct.toFixed(1)}\n`;
+                });
+            }
+            const blob = new Blob([csv], { type: "text/csv" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "bowling_lab_data.csv";
+            a.click();
+        }
+
+        function scrollToSec(id) {
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Initialize App
+        initData();
+        updateUI();
+        renderDays();
+    </script>
+</body>
+</html>
